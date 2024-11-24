@@ -1,0 +1,52 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport"
+      content="width=device-width,initial-scale=1,user-scalable=0">
+    <title>Frong</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css">
+    <style>
+      body { 
+        font-size: xx-large;
+        touch-action:none
+      }
+      table {
+        border-collapse: collapse;
+                user-select: none;
+        -webkit-user-select: none;
+      }
+      td { border: solid; padding: 32px; }
+    </style>
+</head>
+<body>
+<table id="keys" oncontextmenu="return false">
+  <tr><td id="a">a</td><td id="s">s</td></tr>
+</table>
+<script>
+  let key = false
+  
+  const a = document.getElementById('a')
+  a.onpointerenter = event => {
+    key = 'a'
+  }
+  a.onpointerout = event => {
+    if (key === 'a') key = false
+  }
+  
+  const a = document.getElementById('s')
+  s.onpointerenter = event => {
+    key = 's'
+  }
+  s.onpointerout = event => {
+    if (key === 's') key = false
+  }
+  
+  window.onpointerdown = event => {
+    event.target.releasePointerCapture(event.pointerId)
+  }
+  
+  setInterval(() => console.log(key), 1000)
+</script>
+</body>
+</html>

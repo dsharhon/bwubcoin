@@ -1,0 +1,96 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Bong</title>
+    <style>
+        body {
+            margin: 0;
+            /*display: grid;
+            height: 100vh;
+            place-items: center;*/
+            background: black;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@2"></script>
+</head>
+<body><script>
+const preload = game => {
+    game.scale.scaleMode = Phaser.ScaleManager.NO_SCALE // SHOW_ALL
+    game.scale.pageAlignHorizontally = true
+    game.scale.pageAlignVertically = true
+    game.stage.backgroundColor = "#eee"
+    
+    game.load.image("ball", "ball.png")
+    game.load.image("paddle", "paddle.png")
+    game.load.image("paddle2", "paddle2.png")
+    game.load.image("brick", "brick.png")
+}
+let ball, paddle, keys
+const field = {
+    w: 11, h: 11, c: 18, r: 6, p: 20,
+    bricks: [],
+    init: function (game) {
+        const { w, h, r, c, p, bricks } = this
+        game.add.group()
+        for (let i = 0; i < c; i++) for (let j = 0; j < r; j++) {
+            let x = i * (w + p) + 20
+            let y = j * (h + p) + 20
+            const brick = game.add.sprite(x, y, "brick")
+            game.physics.enable(brick, Phaser.Physics.ARCADE)
+            brick.body.immovable = true
+            brick.anchor.set(0.5)
+            bricks.push(brick)
+        }
+    }
+}
+const create = game => {
+    game.physics.startSystem(Phaser.Physics.ARCADE)
+    
+    ball = game.add.sprite(150, 150, "ball")
+    ball.anchor.set(0.5)
+    game.physics.enable(ball, Phaser.Physics.ARCADE)
+    ball.body.collideWorldBounds = true
+    ball.body.bounce.set(1)
+    ball.body.velocity.set(150, 150)
+    
+    paddle = game.add.sprite(game.world.width / 2, game.world.height, "paddle")
+    paddle.anchor.set(0.5, 1)
+    game.physics.enable(paddle, Phaser.Physics.ARCADE)
+    paddle.body.collideWorldBounds = true
+    paddle.body.immovable = true
+    keys = game.input.keyboard.createCursorKeys()
+    
+    field.init(game)
+}
+const update = () => {
+    game.physics.arcade.collide(ball, paddle, (ball, paddle) => {
+        if (paddle.key === "paddle2") ball.reset()
+    })
+    
+    game.physics.arcade.collide(ball, field.bricks, (ball, brick) => {
+        brick.kill()
+    })
+    
+    ball.scale.x = Math.sign(ball.body.velocity.x) // face forward
+    
+    paddle.x = Math.round(paddle.x) // pixel perfect
+    paddle.body.velocity.x = 0
+    if (keys.left.isDown) {
+        paddle.body.velocity.x -= 400
+    }
+    if (keys.right.isDown) {
+        paddle.body.velocity.x += 400
+    }
+    
+    if (keys.up.isDown) {
+        if (paddle.key !== "paddle2") paddle.loadTexture("paddle2")
+    } else {
+        if (paddle.key !== "paddle") paddle.loadTexture("paddle")
+    }
+}
+const game = new Phaser.Game(480, 320, Phaser.CANVAS, null, {
+    preload, create, update
+})
+</script></body>
+</html>

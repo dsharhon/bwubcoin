@@ -1,0 +1,161 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Bong</title>
+    <style>
+        body {
+            margin: 0;
+            display: grid;
+            height: 100vh;
+            place-items: center;
+            background: black;
+        }
+        canvas {
+            background: #eee;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas" width="480" height="320"></canvas>
+    <script type="module">
+        const canvas = document.getElementById("canvas")
+        const ctx = canvas.getContext("2d")
+        const pi2 = Math.PI *2
+        
+        const paddle = {
+            x: 240, y: 300, w: 160, h: 4,
+            dx: 3, dy: 2,
+            left: false, right: false, up: false, down: false,
+            move: function () {
+                let { x, y, w, h, dx, dy, left, right, up, down } = this
+                if (left) x = Math.max(0, x - dx)
+                if (right) x = Math.min(x + dx, 480 - w)
+                if (up) y = Math.max(0, y - dy)
+                if (down) y = Math.min(y + dy, 320 - h)
+                this.x = x
+                this.y = y
+            },  
+            draw: function () {
+                const { x, y, w, h } = this
+                ctx.beginPath()
+                ctx.rect(x, y, w, h)
+                ctx.fillStyle = "#222"
+                ctx.fill()
+                ctx.closePath()
+            }
+        }
+
+        const field = {
+            c: 25, r: 15,
+            //c: 0, r: 0, // DEBUG
+            w: 15, h: 4,
+            pad: 2, top: 30, left: 30,
+            bricks: [],
+            create: function () {
+                const { c, r, w, h, pad, left, top, bricks } = this
+                for (let i = 0; i < c; i++) {
+                    bricks[i] = []
+                    for (let j = 0; j < r; j++) {
+                        const x = i * (w + pad) + left
+                        const y = j * (h + pad) + top
+                        bricks[i][j] = { x, y, w, h, hit: false }
+                    }
+                }
+            },
+            draw: function () {
+                const { c, r, bricks } = this
+                for (let i = 0; i < c; i++) {
+                    for (let j = 0; j < r; j++) {
+                        const { x, y, w, h, hit } = bricks[i][j]
+                        if (!hit) {
+                            ctx.beginPath()
+                            ctx.rect(x, y, w, h)
+                            ctx.fillStyle = "#09d"
+                            ctx.fill()
+                            ctx.closePath()
+                        }
+                    }
+                }
+            }
+        }
+        field.create()
+        
+        const ball = {
+            x: 240, y: 70, r: 4,
+            dx: 2, dy: 2,
+            // collide with walls and paddle
+            move: function () {
+                let { x, y, r, dx, dy } = this
+                // detect wall collisions
+                if (x + dx < r || x + dx > 480 - r) dx = -dx
+                if (y + dy < r || y + dy > 320 - r) dy = -dy
+                // detect paddle collisions
+                const p = paddle
+                if (x > p.x && x < p.x + p.w && y > p.y && y < p.y + p.h) {
+                    if (dy > 0) {
+                        dy = -dy
+                    }
+                }
+                // detect brick collisions
+                const f = field
+                for (let i = 0; i < f.c; i++) {
+                    for (let j = 0; j < f.r; j++) {
+                        const b = f.bricks[i][j]
+                        if (x > b.x && x < b.x + b.w && y > b.y && y < b.y + b.h) {
+                            if (!b.hit) {
+                                b.hit = true
+                                dy = -dy
+                            }
+                        }
+                    }
+                }
+                // actually move
+                this.dx = dx
+                this.dy = dy
+                this.x += dx
+                this.y += dy
+            },
+            draw: function () {
+                const { x, y, r } = this
+                ctx.beginPath()
+                ctx.arc(x, y, r, 0, pi2, false)
+                ctx.fillStyle = "#111"
+                ctx.fill()
+                ctx.closePath()
+            }
+        }
+        
+        const fps = 50
+        const loop = () => {
+            ctx.clearRect(0, 0, 480, 320)
+            ball.move()
+            paddle.move()
+            paddle.draw()
+            field.draw()
+            ball.draw()
+        }
+        setInterval(loop, 17)
+        
+        const keyDownHandler = event => {
+            const { key } = event
+            const p = paddle
+            if (key === "ArrowLeft") p.left = true
+            if (key === "ArrowRight") p.right = true
+            if (key === "ArrowUp") p.up = true
+            if (key === "ArrowDown") p.down = true
+        }
+        const keyUpHandler = event => {
+            const { key } = event
+            const p = paddle
+            if (key === "ArrowLeft") p.left = false
+            if (key === "ArrowRight") p.right = false
+            if (key === "ArrowUp") p.up = false
+            if (key === "ArrowDown") p.down = false
+        }
+        addEventListener("keydown", keyDownHandler, false)
+        addEventListener("keyup", keyUpHandler, false)
+        
+    </script>
+</body>
+</html>

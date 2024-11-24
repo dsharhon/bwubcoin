@@ -1,0 +1,156 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Frong</title>
+    <style>
+        body {
+            margin: 0;
+            /*display: grid;
+            height: 100vh;
+            place-items: center;*/
+            background: black;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@2"></script>
+</head>
+<body><script>
+const bricks = {
+    preload: function (game) {
+        game.load.image("brick", "brick.png")
+        game.load.audio("tap", "tap.mp3") // CC The Sample Workshop
+    },
+    create: function (game) {
+        this.sprites = []
+        this.tap = game.add.audio("tap")
+    },
+    init: function (game) {
+        const sprites = this.sprites
+        const w = 11, h = 11, c = 15, r = 6, p = 20 // dimensions
+        for (let i = 0; i < c; i++) for (let j = 0; j < r; j++) {
+            let x = i * (w + p) + 23
+            let y = j * (h + p) + 23
+            const brick = game.add.sprite(x, y, "brick")
+            brick.anchor.set(0.5)
+            game.physics.enable(brick, Phaser.Physics.ARCADE)
+            brick.body.immovable = true
+            sprites.push(brick)
+        }
+    }
+}
+const flies = {
+    preload: function (game) {
+        game.load.image("fly", "fly.png")
+        game.load.audio("fly", "fly.mp3") // CC Henrik Lagergren Music
+        game.load.audio("flies", "flies.mp3") // CC Bruno Auzet
+    },
+    create: function (game) {
+        this.level = 0
+        this.eaten = 0
+        this.music1 = game.add.audio("fly")
+        this.music2 = game.add.audio("flies")
+    },
+    init: function (game) {
+        const level = this.level + 1
+        const sprites = []
+        for (let i = 0; i < level; i++) {
+            const fly = game.add.sprite(0, 0, "fly")
+            fly.anchor.set(0.5)
+            game.physics.enable(fly, Phaser.Physics.ARCADE)
+            fly.body.collideWorldBounds = true
+            fly.body.bounce.set(1)
+            fly.body.velocity.set(100 + 100 * Math.random(), 100 + 100 * Math.random())
+            sprites.push(fly)
+        }
+        this.level = level
+        this.eaten = 0
+        this.sprites = sprites
+        if (level === 1) this.music1.play()
+        if (level % 10 === 0) this.music2.play()
+    }
+}
+const frogs = {
+    preload: function (game) {
+        game.load.image("frog", "frog.png")
+        game.load.image("frog2", "frog2.png")
+        game.load.audio("chomp", "chomp.mp3") // CC Jofae
+    },
+    create: function (game) {
+        const frog = game.add.sprite(game.world.width / 2, game.world.height, "frog")
+        frog.anchor.set(0.5, 1)
+        game.physics.enable(frog, Phaser.Physics.ARCADE)
+        frog.body.immovable = true
+        this.sprites = [frog]
+        this.chomp = game.add.audio("chomp")
+    }
+}
+const input = {
+    create: function (game) {
+        this.keys = game.input.keyboard.addKeys({
+            left: Phaser.KeyCode.LEFT,
+            up: Phaser.KeyCode.UP,
+            right: Phaser.KeyCode.RIGHT,
+            down: Phaser.KeyCode.DOWN,
+            shift: Phaser.KeyCode.SHIFT,
+            spacebar: Phaser.KeyCode.SPACEBAR
+        })
+    }
+}
+const preload = game => {
+    game.scale.scaleMode = Phaser.ScaleManager.NO_SCALE // SHOW_ALL
+    game.scale.pageAlignHorizontally = true
+    game.scale.pageAlignVertically = true
+    game.stage.backgroundColor = "#19e"
+    bricks.preload(game)
+    flies.preload(game)
+    frogs.preload(game)
+}
+const create = game => {
+    game.physics.startSystem(Phaser.Physics.ARCADE)
+    bricks.create(game)
+    flies.create(game)
+    frogs.create(game)
+    input.create(game)
+}
+const update = game => {
+    const keys = input.keys
+    const frog = frogs.sprites[0]
+    // start new level if all flies are eaten
+    if (flies.eaten === flies.level) {
+        bricks.init(game)
+        flies.init(game)
+    }
+    // activate/deactivate/move frog
+    if (keys.up.isDown || keys.shift.isDown) {
+        frog.loadTexture("frog2")
+    } else {
+        frog.loadTexture("frog")
+        if (keys.left.isDown) frog.x = Math.max(frog.x - 4, 0)
+        if (keys.right.isDown) frog.x = Math.min(480, frog.x + 4)
+    }
+    // collide flies and bricks
+    game.physics.arcade.collide(flies.sprites, bricks.sprites, (fly, brick) => {
+        if (Math.random() < 0.5/(1 + flies.level/10)) {
+            brick.destroy()
+            bricks.tap.play("", 0, 0.1)
+        }
+    })
+    // collide flies and frog
+    game.physics.arcade.collide(flies.sprites, frog, (fly, frog) => {
+        if (keys.up.isDown || keys.shift.isDown) {
+            fly.kill()
+            flies.eaten += 1
+            frogs.chomp.play()
+            frog.loadTexture("frog")
+        }
+    })
+    // face flies forward
+    flies.sprites.forEach(fly => {
+        fly.scale.x = Math.sign(fly.body.velocity.x)
+    })
+}
+const game = new Phaser.Game(480, 320, Phaser.CANVAS, null, {
+    preload, create, update
+})
+</script></body>
+</html>

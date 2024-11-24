@@ -1,0 +1,146 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Bwong</title>
+    <style>
+        body {
+            margin: 0;
+            /*display: grid;
+            height: 100vh;
+            place-items: center;*/
+            background: black;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@2"></script>
+</head>
+<body><script>
+const preload = game => {
+    game.scale.scaleMode = Phaser.ScaleManager.NO_SCALE // SHOW_ALL
+    game.scale.pageAlignHorizontally = true
+    game.scale.pageAlignVertically = true
+    game.stage.backgroundColor = "#19e"
+    
+    game.load.image("fly", "fly.png")
+    game.load.image("frog", "frog.png")
+    game.load.image("frog2", "frog2.png")
+    game.load.image("brick", "brick.png")
+    
+    // Bite (Cartoon Style) by Jofae -- https://freesound.org/s/353067/ -- License: CC
+    game.load.audio("chomp", "chomp.mp3")
+    // https://freesound.org/people/The_Sample_Workshop/sounds/624068/
+    game.load.audio("tap", "tap.mp3")
+    // https://freesound.org/people/Henriklagergrenmusic/sounds/651802/
+    game.load.audio("music1", "fly.mp3")
+    // https://freesound.org/people/bruno.auzet/sounds/692840/
+    game.load.audio("music2", "flies.mp3")
+
+}
+let fly, frog, keys, chomp, tap, music1, music2
+const field = {
+    w: 11, h: 11, c: 15, r: 6, p: 20,
+    bricks: [],
+    init: function (game) {
+        const { w, h, r, c, p, bricks } = this
+        bricks.length = 0
+        game.add.group()
+        for (let i = 0; i < c; i++) for (let j = 0; j < r; j++) {
+            let x = i * (w + p) + 24
+            let y = j * (h + p) + 24
+            const brick = game.add.sprite(x, y, "brick")
+            game.physics.enable(brick, Phaser.Physics.ARCADE)
+            brick.body.immovable = true
+            brick.anchor.set(0.5)
+            bricks.push(brick)
+        }
+    }
+}
+const flies = {
+    sprites: [],
+    level: 0,
+    kills: 0,
+    init: function (game) {
+        const sprites = this.sprites = []
+        const level = this.level += 1
+        for (let i = 0; i < level; i++) {
+            const fly = game.add.sprite(0, 0, "fly")
+            fly.anchor.set(0.5)
+            game.physics.enable(fly, Phaser.Physics.ARCADE)
+            fly.body.collideWorldBounds = true
+            fly.body.bounce.set(1)
+            fly.body.velocity.set(100 + 100 * Math.random(), 100 + 100 * Math.random())
+            sprites.push(fly)
+        }
+        this.kills = 0
+        
+        if (level < 10) {
+            music1.play()
+        } else if (level % 10 === 0) {
+            music2.play()
+        }
+    }
+}
+const create = game => {
+    chomp = game.add.audio("chomp")
+    tap = game.add.audio("tap")
+    music1 = game.add.audio("music1")
+    music2 = game.add.audio("music2")
+    
+    game.physics.startSystem(Phaser.Physics.ARCADE)
+    
+    flies.init(game)
+    
+    frog = game.add.sprite(game.world.width / 2, game.world.height, "frog")
+    frog.anchor.set(0.5, 1)
+    game.physics.enable(frog, Phaser.Physics.ARCADE)
+    frog.body.collideWorldBounds = true
+    frog.body.immovable = true
+    keys = game.input.keyboard.addKeys({
+        left: Phaser.KeyCode.LEFT,
+        up: Phaser.KeyCode.UP,
+        right: Phaser.KeyCode.RIGHT,
+        down: Phaser.KeyCode.DOWN,
+        shift: Phaser.KeyCode.SHIFT,
+        spacebar: Phaser.KeyCode.SPACEBAR
+    })
+    
+    field.init(game)
+}
+const update = game => {
+    // activate/deactivate/move frog
+    if (keys.up.isDown || keys.shift.isDown || keys.spacebar.isDown) {
+        frog.loadTexture("frog2")
+    } else {
+        frog.loadTexture("frog")
+        if (keys.left.isDown) frog.x = Math.max(frog.x - 4, 0)
+        if (keys.right.isDown) frog.x = Math.min(480, frog.x + 4)
+    }
+    
+    flies.sprites.forEach(fly => {
+        game.physics.arcade.collide(fly, field.bricks, (fly, brick) => {
+            if (Math.random() < 0.6) {
+                brick.kill()
+                tap.play()
+            }
+        })
+        game.physics.arcade.collide(fly, frog, (fly, frog) => {
+            if (keys.up.isDown || keys.shift.isDown || keys.spacebar.isDown) {
+                fly.kill()
+                flies.kills += 1
+                chomp.play()
+                frog.loadTexture("frog")
+                // load next level if all flies killed
+                if (flies.level === flies.kills) {
+                    flies.init(game)
+                    field.init(game)
+                }
+            }
+        })
+        fly.scale.x = Math.sign(fly.body.velocity.x) // face forward
+    })
+}
+const game = new Phaser.Game(480, 320, Phaser.CANVAS, null, {
+    preload, create, update
+})
+</script></body>
+</html>

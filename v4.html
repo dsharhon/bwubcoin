@@ -1,0 +1,128 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Bwong</title>
+    <style>
+        body {
+            margin: 0;
+            /*display: grid;
+            height: 100vh;
+            place-items: center;*/
+            background: black;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@2"></script>
+</head>
+<body><script>
+const preload = game => {
+    game.scale.scaleMode = Phaser.ScaleManager.NO_SCALE // SHOW_ALL
+    game.scale.pageAlignHorizontally = true
+    game.scale.pageAlignVertically = true
+    game.stage.backgroundColor = "#19e"
+    
+    game.load.image("ball", "ball.png")
+    game.load.image("paddle", "paddle.png")
+    game.load.image("paddle2", "paddle2.png")
+    game.load.image("brick", "brick.png")
+    
+    // Bite (Cartoon Style) by Jofae -- https://freesound.org/s/353067/ -- License: Creative Commons
+    game.load.audio("chomp", "chomp.mp3")
+}
+let ball, paddle, keys, chomp
+const field = {
+    w: 11, h: 11, c: 15, r: 6, p: 20,
+    bricks: [],
+    init: function (game) {
+        const { w, h, r, c, p, bricks } = this
+        bricks.length = 0
+        game.add.group()
+        for (let i = 0; i < c; i++) for (let j = 0; j < r; j++) {
+            let x = i * (w + p) + 24
+            let y = j * (h + p) + 24
+            const brick = game.add.sprite(x, y, "brick")
+            game.physics.enable(brick, Phaser.Physics.ARCADE)
+            brick.body.immovable = true
+            brick.anchor.set(0.5)
+            bricks.push(brick)
+        }
+    }
+}
+const balls = {
+    sprites: [],
+    level: 0,
+    kills: 0,
+    init: function (game) {
+        const sprites = this.sprites = []
+        const level = this.level += 1
+        for (let i = 0; i < level; i++) {
+            const ball = game.add.sprite(0 + i * (240 / level), 0, "ball")
+            ball.anchor.set(0.5)
+            game.physics.enable(ball, Phaser.Physics.ARCADE)
+            ball.body.collideWorldBounds = true
+            ball.body.bounce.set(1)
+            ball.body.velocity.set(100 + 100 * Math.random(), 100 + 100 * Math.random())
+            sprites.push(ball)
+        }
+        this.kills = 0
+    }
+}
+const create = game => {
+    game.physics.startSystem(Phaser.Physics.ARCADE)
+    
+    balls.init(game)
+    
+    paddle = game.add.sprite(game.world.width / 2, game.world.height, "paddle")
+    paddle.anchor.set(0.5, 1)
+    game.physics.enable(paddle, Phaser.Physics.ARCADE)
+    paddle.body.collideWorldBounds = true
+    paddle.body.immovable = true
+    keys = game.input.keyboard.addKeys({
+        left: Phaser.KeyCode.LEFT,
+        up: Phaser.KeyCode.UP,
+        right: Phaser.KeyCode.RIGHT,
+        down: Phaser.KeyCode.DOWN,
+        shift: Phaser.KeyCode.SHIFT,
+        space: Phaser.KeyCode.SPACE
+    })
+    
+    field.init(game)
+    
+    chomp = game.add.audio("chomp")
+}
+const update = game => {
+    // activate/deactivate paddle
+    if (keys.up.isDown || keys.shift.isDown || keys.space.isDown) {
+        paddle.loadTexture("paddle2")
+    }
+    else paddle.loadTexture("paddle")
+    // move paddle if not activated
+    if (paddle.key === "paddle") {
+        if (keys.left.isDown) paddle.x = Math.max(paddle.x - 4, 0)
+        if (keys.right.isDown) paddle.x = Math.min(480, paddle.x + 4)
+    }
+    
+    balls.sprites.forEach(ball => {
+        game.physics.arcade.collide(ball, field.bricks, (ball, brick) => {
+            if (Math.random() < 0.5) brick.kill()
+        })
+        game.physics.arcade.collide(ball, paddle, (ball, paddle) => {
+            if (paddle.key === "paddle2") {
+                ball.kill()
+                balls.kills += 1
+                chomp.play()
+                // load next level if all balls killed
+                if (balls.level === balls.kills) {
+                    balls.init(game)
+                    field.init(game)
+                }
+            }
+        })
+        ball.scale.x = Math.sign(ball.body.velocity.x) // face forward
+    })
+}
+const game = new Phaser.Game(480, 320, Phaser.CANVAS, null, {
+    preload, create, update
+})
+</script></body>
+</html>
